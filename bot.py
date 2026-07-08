@@ -82,7 +82,8 @@ def get_coin_list():
     popular_coins = [
         "bitcoin", "ethereum", "solana", "dogecoin", "cardano",
         "polkadot", "avalanche-2", "polygon", "chainlink", "litecoin",
-        "binancecoin", "ripple", "tron", "stellar", "uniswap"
+        "binancecoin", "ripple", "tron", "stellar", "uniswap",
+        "cosmos", "near", "algorand", "vechain", "filecoin"
     ]
     return popular_coins
 
@@ -127,18 +128,25 @@ async def price_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /price command"""
     if not context.args:
         keyboard = [
-            [InlineKeyboardButton("Bitcoin", callback_data="price_bitcoin"),
-             InlineKeyboardButton("Ethereum", callback_data="price_ethereum")],
-            [InlineKeyboardButton("Solana", callback_data="price_solana"),
-             InlineKeyboardButton("Dogecoin", callback_data="price_dogecoin")],
-            [InlineKeyboardButton("Cardano", callback_data="price_cardano"),
-             InlineKeyboardButton("More...", callback_data="popular")]
+            [
+                InlineKeyboardButton("🟠 Bitcoin", callback_data="price_bitcoin"),
+                InlineKeyboardButton("🔵 Ethereum", callback_data="price_ethereum")
+            ],
+            [
+                InlineKeyboardButton("🟣 Solana", callback_data="price_solana"),
+                InlineKeyboardButton("🟢 Dogecoin", callback_data="price_dogecoin")
+            ],
+            [
+                InlineKeyboardButton("🔴 Cardano", callback_data="price_cardano"),
+                InlineKeyboardButton("📊 More...", callback_data="popular")
+            ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
-            "Please specify a coin or choose one below:\n\n"
-            "Example: `/price bitcoin`",
+            "💰 *Please specify a coin or choose one below:*\n\n"
+            "Example: `/price bitcoin`\n"
+            "Example: `/price ethereum`",
             reply_markup=reply_markup,
             parse_mode="Markdown"
         )
@@ -153,27 +161,42 @@ async def price_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"❌ Could not find price for `{coin_id}`.\n\n"
             "Try using the full coin ID:\n"
-            "• bitcoin\n"
-            "• ethereum\n"
-            "• solana\n"
-            "• dogecoin\n"
-            "• cardano\n\n"
+            "• `bitcoin`\n"
+            "• `ethereum`\n"
+            "• `solana`\n"
+            "• `dogecoin`\n"
+            "• `cardano`\n\n"
             "Use `/popular` to see more coins.",
             parse_mode="Markdown"
         )
         return
     
-    # Get price in USD and BTC
+    # Get price in BTC
     price_btc = get_crypto_price(coin_id, "btc")
     
-    response = f"💰 *{coin_id.title()} Price*\n\n"
+    # Format coin name for display
+    display_name = coin_id.title()
+    if coin_id == "avalanche-2":
+        display_name = "Avalanche"
+    elif coin_id == "binancecoin":
+        display_name = "BNB"
+    
+    response = f"💰 *{display_name} Price*\n\n"
     response += f"💵 USD: `${price:,.2f}`\n"
     if price_btc:
         response += f"₿ BTC: {price_btc:.8f}\n"
     
     response += f"\n🕐 Updated: Just now"
     
-    await update.message.reply_text(response, parse_mode="Markdown")
+    # Add refresh button
+    keyboard = [[InlineKeyboardButton("🔄 Refresh", callback_data=f"price_{coin_id}")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        response,
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
     logger.info(f"User {update.effective_user.username} checked price for {coin_id}")
 
 async def trending_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -200,20 +223,34 @@ async def trending_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     message += "💡 Use `/price <coin>` to check specific prices"
     
-    await update.message.reply_text(message, parse_mode="Markdown")
+    # Add refresh button
+    keyboard = [[InlineKeyboardButton("🔄 Refresh", callback_data="trending")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        message,
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
     logger.info(f"User {update.effective_user.username} checked trending coins")
 
 async def popular_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /popular command"""
     coins = get_coin_list()
-    message = "*📊 Popular Cryptocurrencies*\n\n"
     
     # Create buttons for top coins
     keyboard = []
     row = []
-    for i, coin in enumerate(coins[:12], 1):
+    for i, coin in enumerate(coins[:15], 1):
+        # Format display name
+        display_name = coin.title()
+        if coin == "avalanche-2":
+            display_name = "Avalanche"
+        elif coin == "binancecoin":
+            display_name = "BNB"
+        
         row.append(InlineKeyboardButton(
-            coin.title(), 
+            display_name, 
             callback_data=f"price_{coin}"
         ))
         if i % 3 == 0:
@@ -226,7 +263,8 @@ async def popular_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        "Choose a coin to see its price:\n\n"
+        "📊 *Popular Cryptocurrencies*\n\n"
+        "Click a button to see its price:\n\n"
         "💡 Or use `/price <coin>` directly.",
         reply_markup=reply_markup,
         parse_mode="Markdown"
@@ -236,23 +274,23 @@ async def popular_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help command"""
     help_text = (
-        "*🤖 Crypto Bot Commands*\n\n"
-        "📌 *Basic Commands*\n"
-        "/start - Start the bot\n"
-        "/price <coin> - Get current price\n"
-        "/trending - See trending coins\n"
-        "/popular - View popular coins\n"
-        "/help - Show this message\n\n"
+        "*🤖 Crypto Bot Help*\n\n"
+        "📌 *Commands*\n"
+        "• `/start` - Start the bot\n"
+        "• `/price <coin>` - Get current price\n"
+        "• `/trending` - See trending coins\n"
+        "• `/popular` - View popular coins\n"
+        "• `/help` - Show this message\n\n"
         "📌 *Examples*\n"
         "`/price bitcoin`\n"
         "`/price ethereum`\n"
         "`/price solana`\n\n"
         "📌 *Supported Coins*\n"
         "bitcoin, ethereum, solana, dogecoin, cardano, polkadot, "
-        "avalanche, polygon, chainlink, litecoin, binancecoin, ripple, "
-        "and many more!\n\n"
+        "avalanche, polygon, chainlink, litecoin, BNB, ripple, "
+        "tron, stellar, uniswap, and many more!\n\n"
         "📌 *Tips*\n"
-        "• Use full coin names (e.g., 'bitcoin' not 'btc')\n"
+        "• Use full coin IDs (e.g., 'bitcoin' not 'btc')\n"
         "• Click the buttons for quick access\n"
         "• Prices update in real-time\n\n"
         "Made with ❤️ by @Topbliss1_bot"
@@ -269,18 +307,29 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle price buttons
     if data.startswith("price_"):
         coin_id = data.replace("price_", "")
-        await query.edit_message_text(f"🔍 Fetching price for *{coin_id}*...", parse_mode="Markdown")
+        
+        # Format display name
+        display_name = coin_id.title()
+        if coin_id == "avalanche-2":
+            display_name = "Avalanche"
+        elif coin_id == "binancecoin":
+            display_name = "BNB"
+        
+        await query.edit_message_text(
+            f"🔍 Fetching price for *{display_name}*...",
+            parse_mode="Markdown"
+        )
         
         price = get_crypto_price(coin_id)
         if price is None:
             await query.edit_message_text(
-                f"❌ Could not find price for `{coin_id}`.\n\n"
+                f"❌ Could not find price for `{display_name}`.\n\n"
                 "Try using `/price <coin>` with a valid coin ID.",
                 parse_mode="Markdown"
             )
             return
         
-        response = f"💰 *{coin_id.title()} Price*\n\n"
+        response = f"💰 *{display_name} Price*\n\n"
         response += f"💵 USD: `${price:,.2f}`\n"
         
         # Add BTC price
@@ -291,7 +340,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response += f"\n🕐 Updated: Just now"
         
         # Add back button
-        keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data="popular")]]
+        keyboard = [
+            [InlineKeyboardButton("🔄 Refresh", callback_data=f"price_{coin_id}")],
+            [InlineKeyboardButton("⬅️ Back", callback_data="popular")]
+        ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
@@ -304,7 +356,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "trending":
         trending = get_trending_coins()
         if not trending:
-            await query.edit_message_text("❌ Could not fetch trending coins.")
+            await query.edit_message_text("❌ Could not fetch trending coins. Please try again.")
             return
         
         message = "*🔥 Top Trending Coins*\n\n"
@@ -328,9 +380,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         coins = get_coin_list()
         keyboard = []
         row = []
-        for i, coin in enumerate(coins[:12], 1):
+        for i, coin in enumerate(coins[:15], 1):
+            display_name = coin.title()
+            if coin == "avalanche-2":
+                display_name = "Avalanche"
+            elif coin == "binancecoin":
+                display_name = "BNB"
+            
             row.append(InlineKeyboardButton(
-                coin.title(), 
+                display_name, 
                 callback_data=f"price_{coin}"
             ))
             if i % 3 == 0:
@@ -350,28 +408,29 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle help button
     elif data == "help":
         help_text = (
-            "*Commands:*\n"
-            "/start - Start\n"
+            "*Available Commands*\n\n"
+            "/start - Welcome message\n"
             "/price <coin> - Get price\n"
-            "/trending - Trending\n"
+            "/trending - Trending coins\n"
             "/popular - Popular coins\n"
-            "/help - Help"
+            "/help - Show help"
         )
         await query.edit_message_text(help_text, parse_mode="Markdown")
     
     # Handle price from menu
     elif data == "price":
-        await query.edit_message_text(
-            "Use `/price <coin>` or click a popular coin below.",
-            parse_mode="Markdown"
-        )
-        # Trigger popular display
         coins = get_coin_list()
         keyboard = []
         row = []
-        for i, coin in enumerate(coins[:12], 1):
+        for i, coin in enumerate(coins[:15], 1):
+            display_name = coin.title()
+            if coin == "avalanche-2":
+                display_name = "Avalanche"
+            elif coin == "binancecoin":
+                display_name = "BNB"
+            
             row.append(InlineKeyboardButton(
-                coin.title(), 
+                display_name, 
                 callback_data=f"price_{coin}"
             ))
             if i % 3 == 0:
@@ -382,8 +441,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton("🔄 Refresh", callback_data="popular")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.callback_query.message.reply_text(
-            "📊 *Popular Coins:*",
+        await query.edit_message_text(
+            "📊 *Popular Coins:*\n\nClick a button to see its price.",
             reply_markup=reply_markup,
             parse_mode="Markdown"
         )
@@ -403,8 +462,8 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     """Run the bot"""
     logger.info("🚀 Starting Crypto Price Bot...")
-    logger.info(f"Bot Name: {BOT_NAME}")
-    logger.info(f"Bot Token: {BOT_TOKEN[:10]}... (hidden)")
+    logger.info(f"📌 Bot Name: {BOT_NAME}")
+    logger.info(f"📌 Bot Token: {BOT_TOKEN[:10]}... (hidden)")
     
     try:
         # Create application
