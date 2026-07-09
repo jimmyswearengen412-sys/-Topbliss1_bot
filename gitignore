@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+.env
+
+# Data files
+user_data.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Railway
+.railway/
+
+# OS
+.DS_Store
+Thumbs.db
